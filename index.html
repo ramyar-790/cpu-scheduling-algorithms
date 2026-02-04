@@ -1,0 +1,1277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CPU Scheduling Algorithms</title>
+
+    <style>
+      :root {
+        --bg1: #020617;
+        --bg2: #0f172a;
+        --card: #111827;
+        --accent: #38bdf8;
+        --accent2: #a78bfa;
+        --yellow: #facc15;
+        --green: #22c55e;
+        --red: #ef4444;
+        --orange: #fb923c;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, var(--bg1), var(--bg2));
+        color: var(--text);
+        overflow-x: hidden;
+      }
+
+      .slide {
+        min-height: 100vh;
+        padding: 70px 40px;
+        display: none;
+        animation: fade 0.8s ease;
+      }
+      .slide.active {
+        display: block;
+      }
+
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--accent);
+        margin-bottom: 10px;
+      }
+
+      p {
+        max-width: 1050px;
+        font-size: 1.05rem;
+        line-height: 1.9;
+        color: #e2e8f0;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .box {
+        background: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-left: 6px solid var(--accent);
+        padding: 20px;
+        border-radius: 16px;
+        margin-top: 20px;
+        max-width: 1050px;
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.12);
+      }
+
+      .box.purple {
+        border-left: 6px solid var(--accent2);
+      }
+      .box.green {
+        border-left: 6px solid var(--green);
+      }
+      .box.orange {
+        border-left: 6px solid var(--orange);
+      }
+
+      ul {
+        line-height: 1.8;
+      }
+      li {
+        margin-bottom: 6px;
+      }
+
+      table {
+        width: 100%;
+        max-width: 1050px;
+        border-collapse: collapse;
+        margin-top: 20px;
+        overflow: hidden;
+        border-radius: 14px;
+        box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+      }
+
+      th,
+      td {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 12px;
+        text-align: center;
+      }
+
+      th {
+        background: #020617;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      td {
+        background: rgba(15, 23, 42, 0.75);
+      }
+
+      .highlight {
+        color: var(--yellow);
+        font-weight: bold;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid rgba(148, 163, 184, 0.25);
+        margin: 30px 0;
+      }
+
+      /* controls */
+      .controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 999;
+      }
+
+      button {
+        padding: 14px 20px;
+        border: none;
+        border-radius: 14px;
+        background: var(--yellow);
+        color: #020617;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      button:hover {
+        transform: scale(1.05);
+      }
+
+      button.secondary {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+
+      button.danger {
+        background: var(--red);
+        color: white;
+      }
+
+      /* Animated Queue */
+      .queue {
+        display: flex;
+        gap: 12px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+      }
+
+      .qitem {
+        min-width: 110px;
+        padding: 16px;
+        border-radius: 14px;
+        text-align: center;
+        font-weight: 800;
+        font-size: 1.05rem;
+        color: #020617;
+        box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+        animation: pop 0.8s ease;
+      }
+
+      @keyframes pop {
+        from {
+          transform: scale(0.6);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .p1 {
+        background: var(--green);
+      }
+      .p2 {
+        background: var(--yellow);
+      }
+      .p3 {
+        background: var(--accent);
+      }
+      .p4 {
+        background: var(--accent2);
+      }
+      .p5 {
+        background: var(--orange);
+      }
+
+      /* Gantt chart */
+      .gantt {
+        display: flex;
+        margin-top: 25px;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        max-width: 1050px;
+        box-shadow: 0 0 22px rgba(56, 189, 248, 0.12);
+      }
+
+      .gblock {
+        flex: 1;
+        padding: 20px 0;
+        text-align: center;
+        font-weight: 900;
+        color: #020617;
+        position: relative;
+        animation: grow 1.5s ease forwards;
+      }
+
+      @keyframes grow {
+        from {
+          flex: 0;
+          opacity: 0;
+        }
+        to {
+          flex: 1;
+          opacity: 1;
+        }
+      }
+
+      .time {
+        max-width: 1050px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-top: 8px;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.15);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        color: var(--accent);
+        font-weight: 700;
+        margin-right: 8px;
+        margin-top: 10px;
+      }
+
+      /* Footer note */
+      .note {
+        margin-top: 20px;
+        font-size: 0.95rem;
+        color: var(--muted);
+        max-width: 1050px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- SLIDE 1 -->
+    <div
+      class="slide active"
+      data-voice="
+Welcome to CPU Scheduling Algorithms complete guide.
+In this project, you will learn FCFS, SJF, Round Robin, and Priority Scheduling.
+You will see animated ready queue and animated gantt chart.
+You will also learn formulas, tricks, and practice questions.
+"
+    >
+      <h1>CPU Scheduling Algorithms</h1>
+      <p>
+        This is a
+        <span class="highlight">professional interview-ready OS project</span>.
+        It explains CPU Scheduling in a simple English
+      </p>
+
+      <div class="box">
+        <h2>What you will learn</h2>
+        <ul>
+          <li>FCFS Scheduling (First Come First Serve)</li>
+          <li>SJF Scheduling (Shortest Job First)</li>
+          <li>Round Robin Scheduling (Time Quantum)</li>
+          <li>Priority Scheduling</li>
+          <li>Gantt Chart solving step-by-step</li>
+          <li>CT, TAT, WT calculations with tables</li>
+          <li>Exam tricks + interview questions</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>Difficult Words (Simple Meaning)</h2>
+        <b>Process:</b> Running program<br /><br />
+        <b>CPU Scheduling:</b> Deciding which process gets CPU first<br /><br />
+        <b>Ready Queue:</b> Waiting line of processes for CPU<br /><br />
+        <b>Burst Time (BT):</b> CPU work needed by process<br /><br />
+        <b>Arrival Time (AT):</b> Time process enters queue<br /><br />
+        <b>Completion Time (CT):</b> Time process finishes fully<br /><br />
+        <b>Turnaround Time (TAT):</b> Total time spent in system<br /><br />
+        <b>Waiting Time (WT):</b> Time spent waiting in ready queue<br /><br />
+        <b>Context Switch:</b> CPU changes from one process to another<br /><br />
+        <b>Time Quantum:</b> Fixed time slice given in Round Robin
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div
+      class="slide"
+      data-voice="
+Before solving CPU scheduling problems, remember the formulas.
+Completion time is taken from the gantt chart.
+Turnaround time equals completion time minus arrival time.
+Waiting time equals turnaround time minus burst time.
+"
+    >
+      <h2>Important Formulas (Must Remember)</h2>
+
+      <div class="box green">
+        <h3>Formulas</h3>
+        <p>
+          <span class="highlight">TAT = CT − AT</span><br />
+          <span class="highlight">WT = TAT − BT</span><br /><br />
+          <b>CPU Utilization:</b> Percentage of time CPU is busy.<br />
+          <b>Throughput:</b> Number of processes completed per unit time.
+        </p>
+      </div>
+
+      <div class="box orange">
+        <h3>Golden Rule (Exam Trick)</h3>
+        <ul>
+          <li>First draw Gantt chart properly.</li>
+          <li>Then take Completion Time (CT).</li>
+          <li>Then calculate TAT and WT using formula.</li>
+          <li>Never guess WT directly.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FCFS INTRO -->
+    <div
+      class="slide"
+      data-voice="
+Now we start with FCFS scheduling.
+FCFS means First Come First Serve.
+The process that comes first gets CPU first.
+It is non preemptive.
+It is simple but has convoy effect problem.
+"
+    >
+      <h1>Algorithm 1: FCFS (First Come First Serve)</h1>
+
+      <div class="box">
+        <h2>FCFS Meaning</h2>
+        <ul>
+          <li><b>FCFS = First Come First Serve</b></li>
+          <li>Like bank queue: first person gets service first</li>
+          <li><b>Non-preemptive:</b> once CPU given, it runs fully</li>
+          <li>Simple but not efficient for short jobs</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>FCFS Rules</h2>
+        <ul>
+          <li>Sort processes by Arrival Time (AT)</li>
+          <li>CPU executes in that same order</li>
+          <li>No time quantum, no interruption</li>
+          <li>Gantt chart will be continuous blocks</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FCFS QUEUE -->
+    <div
+      class="slide"
+      data-voice="
+This is FCFS ready queue animation.
+The order is based on arrival time.
+The first process will go to CPU first.
+"
+    >
+      <h2>FCFS Ready Queue (Animated)</h2>
+      <p>Example processes entering ready queue:</p>
+
+      <div class="queue">
+        <div class="qitem p1">P1</div>
+        <div class="qitem p2">P2</div>
+        <div class="qitem p3">P3</div>
+        <div class="qitem p4">P4</div>
+      </div>
+
+      <div class="box">
+        <b>Explanation:</b><br />
+        P1 came first → CPU gives P1 first.<br />
+        Then P2, then P3, then P4.
+      </div>
+    </div>
+
+    <!-- FCFS SOLVING -->
+    <div
+      class="slide"
+      data-voice="
+Now we solve FCFS example.
+We create input table first.
+Then draw gantt chart.
+Then find completion time.
+Then calculate turnaround and waiting time.
+"
+    >
+      <h2>FCFS Example (Step-by-Step Solving)</h2>
+
+      <div class="box">
+        <h3>Given Input</h3>
+        <p>
+          P1=4, P2=3, P3=2, P4=5<br />
+          Arrival Time = 0 for all
+        </p>
+      </div>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>4</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>5</td>
+          <td>0</td>
+        </tr>
+      </table>
+
+      <div class="box green">
+        <h3>Step 1: Draw Gantt Chart</h3>
+      </div>
+
+      <div class="gantt">
+        <div class="gblock p1">P1</div>
+        <div class="gblock p2">P2</div>
+        <div class="gblock p3">P3</div>
+        <div class="gblock p4">P4</div>
+      </div>
+
+      <div class="time">
+        <span>0</span><span>4</span><span>7</span><span>9</span><span>14</span>
+      </div>
+
+      <div class="box">
+        <h3>Step 2: Completion Time (CT)</h3>
+        <ul>
+          <li>P1 finishes at 4 → CT=4</li>
+          <li>P2 finishes at 7 → CT=7</li>
+          <li>P3 finishes at 9 → CT=9</li>
+          <li>P4 finishes at 14 → CT=14</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- FCFS OUTPUT -->
+    <div
+      class="slide"
+      data-voice="
+Now calculate turnaround time and waiting time.
+Turnaround time equals completion time minus arrival time.
+Waiting time equals turnaround time minus burst time.
+"
+    >
+      <h2>FCFS Output Table (Full Calculation)</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+          <th>CT</th>
+          <th>TAT=CT-AT</th>
+          <th>WT=TAT-BT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>4</td>
+          <td>0</td>
+          <td>4</td>
+          <td>4</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>0</td>
+          <td>7</td>
+          <td>7</td>
+          <td>4</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>0</td>
+          <td>9</td>
+          <td>9</td>
+          <td>7</td>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>5</td>
+          <td>0</td>
+          <td>14</td>
+          <td>14</td>
+          <td>9</td>
+        </tr>
+      </table>
+
+      <div class="box orange">
+        <h3>FCFS Exam Trick</h3>
+        <ul>
+          <li>FCFS always gives high waiting time if first process is big.</li>
+          <li>This problem is called <b>Convoy Effect</b>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SJF INTRO -->
+    <div
+      class="slide"
+      data-voice="
+Now we learn SJF scheduling.
+SJF means shortest job first.
+The process with smallest burst time gets CPU first.
+It gives minimum average waiting time.
+But it can cause starvation.
+"
+    >
+      <h1>Algorithm 2: SJF (Shortest Job First)</h1>
+
+      <div class="box">
+        <h2>SJF Meaning</h2>
+        <ul>
+          <li>SJF selects process with <b>minimum Burst Time</b></li>
+          <li>Like choosing smallest task first</li>
+          <li>Gives best average waiting time</li>
+          <li>But long process may wait too much (starvation)</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>SJF Rules</h2>
+        <ul>
+          <li>Sort processes by Burst Time (BT)</li>
+          <li>Smallest BT executes first</li>
+          <li>Normally non-preemptive version used in basics</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SJF QUEUE -->
+    <div
+      class="slide"
+      data-voice="
+This is SJF ready queue animation.
+The shortest burst time process goes first.
+"
+    >
+      <h2>SJF Ready Queue (Animated)</h2>
+
+      <div class="box">Example: P1=6, P2=2, P3=4, P4=1</div>
+
+      <div class="queue">
+        <div class="qitem p4">P4 (1)</div>
+        <div class="qitem p2">P2 (2)</div>
+        <div class="qitem p3">P3 (4)</div>
+        <div class="qitem p1">P1 (6)</div>
+      </div>
+
+      <div class="box green">
+        <b>Explanation:</b><br />
+        Smallest burst first → P4 executes first, then P2, then P3, then P1.
+      </div>
+    </div>
+
+    <!-- SJF SOLVING -->
+    <div
+      class="slide"
+      data-voice="
+Now solve SJF example.
+First make input table.
+Then reorder by burst time.
+Then draw gantt chart.
+Then calculate completion, turnaround and waiting time.
+"
+    >
+      <h2>SJF Example (Step-by-Step Solving)</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>6</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>2</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>4</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>1</td>
+          <td>0</td>
+        </tr>
+      </table>
+
+      <div class="box">
+        <h3>Step 1: Arrange by BT</h3>
+        <p>Order: <span class="highlight">P4 → P2 → P3 → P1</span></p>
+      </div>
+
+      <div class="gantt">
+        <div class="gblock p4">P4</div>
+        <div class="gblock p2">P2</div>
+        <div class="gblock p3">P3</div>
+        <div class="gblock p1">P1</div>
+      </div>
+
+      <div class="time">
+        <span>0</span><span>1</span><span>3</span><span>7</span><span>13</span>
+      </div>
+    </div>
+
+    <!-- SJF OUTPUT -->
+    <div
+      class="slide"
+      data-voice="
+Now take completion times from gantt chart.
+Then calculate turnaround and waiting time.
+"
+    >
+      <h2>SJF Output Table</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+          <th>CT</th>
+          <th>TAT</th>
+          <th>WT</th>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>1</td>
+          <td>0</td>
+          <td>1</td>
+          <td>1</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>2</td>
+          <td>0</td>
+          <td>3</td>
+          <td>3</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>4</td>
+          <td>0</td>
+          <td>7</td>
+          <td>7</td>
+          <td>3</td>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>6</td>
+          <td>0</td>
+          <td>13</td>
+          <td>13</td>
+          <td>7</td>
+        </tr>
+      </table>
+
+      <div class="box orange">
+        <h3>SJF Trick</h3>
+        <ul>
+          <li>SJF gives minimum average waiting time.</li>
+          <li>But long processes may starve.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RR INTRO -->
+    <div
+      class="slide"
+      data-voice="
+Now we learn Round Robin.
+It is preemptive scheduling algorithm.
+Each process gets fixed time quantum.
+If process not completed it goes back to ready queue.
+This is used in time sharing systems.
+"
+    >
+      <h1>Algorithm 3: Round Robin (RR)</h1>
+
+      <div class="box">
+        <h2>Round Robin Meaning</h2>
+        <ul>
+          <li><b>Preemptive algorithm</b></li>
+          <li>Each process gets equal CPU time</li>
+          <li>Uses <b>Time Quantum</b> (example 2ms)</li>
+          <li>After quantum, process is stopped and sent back</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>RR Rules</h2>
+        <ul>
+          <li>Use FIFO ready queue</li>
+          <li>Execute process for min(remaining BT, quantum)</li>
+          <li>If remaining BT > 0 → push back to queue</li>
+          <li>If remaining BT = 0 → completed</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RR QUEUE -->
+    <div
+      class="slide"
+      data-voice="
+This is Round Robin ready queue.
+CPU gives fixed time slice.
+After one slice process goes back if unfinished.
+"
+    >
+      <h2>Round Robin Ready Queue (Animated)</h2>
+
+      <div class="box">Example: Time Quantum = 2</div>
+
+      <div class="queue">
+        <div class="qitem p1">P1</div>
+        <div class="qitem p2">P2</div>
+        <div class="qitem p3">P3</div>
+      </div>
+
+      <div class="box green">
+        <b>Cycle Example:</b><br />
+        P1 runs 2 units → goes back<br />
+        P2 runs 2 units → goes back<br />
+        P3 runs 2 units → may finish or go back
+      </div>
+    </div>
+
+    <!-- RR SOLVING -->
+    <div
+      class="slide"
+      data-voice="
+Now solve Round Robin example.
+Burst times are P1 five, P2 three, P3 two.
+Quantum is two.
+We execute cyclically and draw gantt chart.
+"
+    >
+      <h2>RR Example (Quantum = 2)</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>5</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>0</td>
+        </tr>
+      </table>
+
+      <div class="box">
+        <h3>Step-by-Step Execution</h3>
+        <ul>
+          <li>P1 runs 2 → remaining 3</li>
+          <li>P2 runs 2 → remaining 1</li>
+          <li>P3 runs 2 → remaining 0 (finished)</li>
+          <li>P1 runs 2 → remaining 1</li>
+          <li>P2 runs 1 → finished</li>
+          <li>P1 runs 1 → finished</li>
+        </ul>
+      </div>
+
+      <div class="gantt">
+        <div class="gblock p1">P1</div>
+        <div class="gblock p2">P2</div>
+        <div class="gblock p3">P3</div>
+        <div class="gblock p1">P1</div>
+        <div class="gblock p2">P2</div>
+        <div class="gblock p1">P1</div>
+      </div>
+
+      <div class="time">
+        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span
+        ><span>9</span><span>10</span>
+      </div>
+    </div>
+
+    <!-- RR OUTPUT -->
+    <div
+      class="slide"
+      data-voice="
+Now take completion times from gantt chart.
+Then compute turnaround and waiting time.
+"
+    >
+      <h2>RR Output Table</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>AT</th>
+          <th>CT</th>
+          <th>TAT</th>
+          <th>WT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>5</td>
+          <td>0</td>
+          <td>10</td>
+          <td>10</td>
+          <td>5</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>0</td>
+          <td>9</td>
+          <td>9</td>
+          <td>6</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>0</td>
+          <td>6</td>
+          <td>6</td>
+          <td>4</td>
+        </tr>
+      </table>
+
+      <div class="box orange">
+        <h3>RR Trick</h3>
+        <ul>
+          <li>Small quantum → more context switching overhead</li>
+          <li>Large quantum → behaves like FCFS</li>
+          <li>Best for time-sharing systems</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PRIORITY INTRO -->
+    <div
+      class="slide"
+      data-voice="
+Now we learn priority scheduling.
+CPU gives priority to highest priority process.
+Usually smaller number means higher priority.
+This can cause starvation for low priority process.
+"
+    >
+      <h1>Algorithm 4: Priority Scheduling</h1>
+
+      <div class="box">
+        <h2>Priority Scheduling Meaning</h2>
+        <ul>
+          <li>Each process has a priority number</li>
+          <li>CPU selects highest priority process first</li>
+          <li>Normally <b>smaller number = higher priority</b></li>
+          <li>Can be preemptive or non-preemptive</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>Priority Rules</h2>
+        <ul>
+          <li>Sort by Priority</li>
+          <li>If tie, use FCFS</li>
+          <li>Starvation possible for low priority processes</li>
+          <li>Aging method solves starvation</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PRIORITY QUEUE -->
+    <div
+      class="slide"
+      data-voice="
+This is priority ready queue.
+Priority one is highest.
+Priority four is lowest.
+CPU will pick smallest priority number first.
+"
+    >
+      <h2>Priority Ready Queue (Animated)</h2>
+
+      <div class="box">Example: Smaller number = Higher priority</div>
+
+      <div class="queue">
+        <div class="qitem p2">P2 (Priority 1)</div>
+        <div class="qitem p3">P3 (Priority 2)</div>
+        <div class="qitem p1">P1 (Priority 3)</div>
+        <div class="qitem p4">P4 (Priority 4)</div>
+      </div>
+
+      <div class="box green"><b>Execution Order:</b> P2 → P3 → P1 → P4</div>
+    </div>
+
+    <!-- PRIORITY SOLVING -->
+    <div
+      class="slide"
+      data-voice="
+Now solve priority scheduling example.
+We arrange based on priority.
+Then draw gantt chart.
+Then compute CT, TAT, WT.
+"
+    >
+      <h2>Priority Scheduling Example</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>Priority</th>
+          <th>AT</th>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>4</td>
+          <td>3</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>1</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>2</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>5</td>
+          <td>4</td>
+          <td>0</td>
+        </tr>
+      </table>
+
+      <div class="box">
+        <h3>Step 1: Arrange by Priority</h3>
+        <p>Priority order: <span class="highlight">P2 → P3 → P1 → P4</span></p>
+      </div>
+
+      <div class="gantt">
+        <div class="gblock p2">P2</div>
+        <div class="gblock p3">P3</div>
+        <div class="gblock p1">P1</div>
+        <div class="gblock p4">P4</div>
+      </div>
+
+      <div class="time">
+        <span>0</span><span>3</span><span>5</span><span>9</span><span>14</span>
+      </div>
+    </div>
+
+    <!-- PRIORITY OUTPUT -->
+    <div
+      class="slide"
+      data-voice="
+Now calculate completion time.
+Then turnaround and waiting time using formulas.
+"
+    >
+      <h2>Priority Output Table</h2>
+
+      <table>
+        <tr>
+          <th>Process</th>
+          <th>BT</th>
+          <th>Priority</th>
+          <th>CT</th>
+          <th>TAT</th>
+          <th>WT</th>
+        </tr>
+        <tr>
+          <td>P2</td>
+          <td>3</td>
+          <td>1</td>
+          <td>3</td>
+          <td>3</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td>P3</td>
+          <td>2</td>
+          <td>2</td>
+          <td>5</td>
+          <td>5</td>
+          <td>3</td>
+        </tr>
+        <tr>
+          <td>P1</td>
+          <td>4</td>
+          <td>3</td>
+          <td>9</td>
+          <td>9</td>
+          <td>5</td>
+        </tr>
+        <tr>
+          <td>P4</td>
+          <td>5</td>
+          <td>4</td>
+          <td>14</td>
+          <td>14</td>
+          <td>9</td>
+        </tr>
+      </table>
+
+      <div class="box orange">
+        <h3>Priority Trick</h3>
+        <ul>
+          <li>Always confirm: smaller priority number is higher priority.</li>
+          <li>
+            If question says bigger number is higher priority, reverse order.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PRACTICE QUESTIONS -->
+    <div
+      class="slide"
+      data-voice="
+Now you will practice questions.
+
+Try solving using gantt chart.
+
+"
+    >
+      <h1>Practice Questions (Must Solve)</h1>
+
+      <div class="box">
+        <h2>Question 1 (FCFS)</h2>
+        <p>
+          P1=5, P2=2, P3=4 (AT=0).<br />
+          Draw Gantt chart and find CT, TAT, WT.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>Question 2 (SJF)</h2>
+        <p>
+          P1=7, P2=3, P3=2, P4=5 (AT=0).<br />
+          Solve using SJF.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>Question 3 (RR)</h2>
+        <p>
+          P1=6, P2=4, P3=3 (Quantum=2).<br />
+          Draw gantt chart and solve.
+        </p>
+      </div>
+
+      <div class="box">
+        <h2>Question 4 (Priority)</h2>
+        <p>
+          P1 BT=4 Priority=2<br />
+          P2 BT=3 Priority=1<br />
+          P3 BT=5 Priority=3<br />
+          Solve Priority Scheduling.
+        </p>
+      </div>
+    </div>
+
+    <!-- PRACTICE ANSWERS -->
+    <div
+      class="slide"
+      data-voice="
+These are answers for practice questions.
+Check your gantt chart and calculations.
+If mismatch, redo carefully.
+"
+    >
+      <h1>Practice Answers (Check Yourself)</h1>
+
+      <div class="box green">
+        <h2>Answer 1 (FCFS)</h2>
+        <p>
+          Gantt: P1 | P2 | P3<br />
+          Time: 0-5-7-11
+        </p>
+      </div>
+
+      <div class="box green">
+        <h2>Answer 2 (SJF)</h2>
+        <p>Order: P3(2) → P2(3) → P4(5) → P1(7)</p>
+      </div>
+
+      <div class="box green">
+        <h2>Answer 3 (RR Quantum=2)</h2>
+        <p>Cycle until completion. Total time = 13</p>
+      </div>
+
+      <div class="box green">
+        <h2>Answer 4 (Priority)</h2>
+        <p>Order: P2 → P1 → P3</p>
+      </div>
+
+      <div class="note"></div>
+    </div>
+
+    <!-- FINAL SUMMARY -->
+    <div
+      class="slide"
+      data-voice="
+Congratulations. You learned all CPU scheduling algorithms.
+You can now solve gantt charts in exams.
+You are interview ready.
+Thank you.
+"
+    >
+      <h1>Final Summary (Interview Ready)</h1>
+
+      <div class="box">
+        <ul>
+          <li><b>FCFS:</b> Simple, but convoy effect</li>
+          <li><b>SJF:</b> Best average waiting time, starvation possible</li>
+          <li><b>RR:</b> Fair, time quantum based, used in time-sharing</li>
+          <li><b>Priority:</b> Based on importance, starvation possible</li>
+        </ul>
+      </div>
+
+      <div class="box purple">
+        <h2>Common Interview Questions</h2>
+        <ul>
+          <li>Why RR is better than FCFS?</li>
+          <li>Why SJF gives minimum average waiting time?</li>
+          <li>What is convoy effect?</li>
+          <li>What is starvation? How to solve it?</li>
+          <li>What is context switching overhead?</li>
+        </ul>
+      </div>
+
+      <div class="box orange">
+        <h2>Final Exam Trick</h2>
+        <ul>
+          <li>Always draw Gantt chart first</li>
+          <li>CT comes directly from chart</li>
+          <li>TAT and WT are formula based</li>
+          <li>Don’t do WT directly</li>
+        </ul>
+      </div>
+
+      <p class="note"></p>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <button class="secondary" onclick="prevSlide()">◀ Prev</button>
+      <button onclick="nextSlide()">Next ▶</button>
+      <button class="danger" onclick="stopVoice()">Stop Voice 🔇</button>
+    </div>
+
+    <script>
+      let slides = document.querySelectorAll(".slide");
+      let index = 0;
+
+      function speak(text) {
+        if (!text) return;
+        speechSynthesis.cancel();
+        let utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 0.9;
+        utter.pitch = 1;
+        speechSynthesis.speak(utter);
+      }
+
+      function showSlide(i) {
+        slides.forEach((s) => s.classList.remove("active"));
+        slides[i].classList.add("active");
+        speak(slides[i].dataset.voice);
+      }
+
+      function nextSlide() {
+        index++;
+        if (index >= slides.length) index = 0;
+        showSlide(index);
+      }
+
+      function prevSlide() {
+        index--;
+        if (index < 0) index = slides.length - 1;
+        showSlide(index);
+      }
+
+      function stopVoice() {
+        speechSynthesis.cancel();
+      }
+
+      showSlide(0);
+    </script>
+  </body>
+</html>
